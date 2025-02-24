@@ -67,3 +67,23 @@ export function getFile(path) {
       return data.href;
     });
 }
+
+// Получение публичной ссылки на папку
+export function getFolderLink() {
+  return fetch("https://cloud-api.yandex.net/v1/disk/resources/public?limit=10&type=dir&fields=items.name,items.public_url", {
+    method: "get",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .then((data) => {
+      const folderObj = data.items.find((elem) => {
+        return elem.name == folderPath;
+      });
+      return folderObj.public_url;
+    });
+}

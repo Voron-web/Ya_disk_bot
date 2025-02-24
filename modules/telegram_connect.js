@@ -30,6 +30,7 @@ export function createDataToSend(data, type) {
       // else if (type == "documents") {
       //   typeFile = "document";
       // }
+
       // Получаем ссылку на файл
       const val = await getFile(encodeURIComponent(element.path.split(":")[1]));
       return {
@@ -69,7 +70,7 @@ export function createDataToSend(data, type) {
       // console.log(arrayBlocksElement);
 
       //отправка каждого блока в чат
-      arrayBlocksElement.forEach((block, index) => {
+      arrayBlocksElement.forEach((block) => {
         sendDataToTg(block);
       });
     }
@@ -83,6 +84,6 @@ function sendDataToTg(data) {
   }
 }
 
-export function sendFirstMessage() {
-  bot.telegram.sendMessage(chat_id, "На ЯндексДиск загружены новые медиа-файлы");
+export function sendFirstMessage(message) {
+  bot.telegram.sendMessage(chat_id, message, { parse_mode: "HTML" });
 }

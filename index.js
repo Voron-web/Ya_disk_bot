@@ -1,7 +1,7 @@
 import "dotenv/config";
 // import { Telegraf } from "telegraf";
 import { initTG, createDataToSend, sendFirstMessage } from "./modules/telegram_connect.js";
-import { filterRequest, lastYaFilesAdded } from "./modules/ya_request.js";
+import { filterRequest, lastYaFilesAdded, getFolderLink } from "./modules/ya_request.js";
 import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 // import { setInterval } from "timers/promises";
 import { setInterval } from "timers";
@@ -125,10 +125,13 @@ async function checkArr(newData) {
 
 // Создает объект данных для отправки в Telegram
 function createTgDataObject(data) {
-  sendFirstMessage();
-  for (let key in data) {
-    createDataToSend(data[key], key);
-  }
+  getFolderLink().then((link) => {
+    const textMessage = `На ЯндексДиск загружены новые медиа-файлы.\n <b>Посмотреть <a href="${link}">все файлы</a></b>`;
+    sendFirstMessage(textMessage);
+    for (let key in data) {
+      createDataToSend(data[key], key);
+    }
+  });
 }
 
 // Сброс переменных в исходное состояние
