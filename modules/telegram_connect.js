@@ -2,88 +2,77 @@ import { Telegraf } from "telegraf";
 import { getFile } from "./ya_request.js";
 import "dotenv/config";
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const chat_id = 1389757454;
+const bot = new Telegraf(process.env.BOT_TOKEN); //Получаем токен бота
+const chat_id = process.env.CHAT_ID; //получаем id чата, в который будут отправляться данные
 
 // Инициализация и запуск бота
 export function initTG() {
-  //   bot.start((ctx) => {
-  //     ctx.reply("Hi!");
-  //     console.log(ctx.chat);
-  //   });
-
-  bot.launch();
+	bot.launch();
 }
 
 export function createDataToSend(data, type) {
-  Promise.all(
-    data.map(async (element) => {
-      // Присвоение типа отправляемых данных
-      let typeFile;
-      if (type == "image") {
-        typeFile = "photo";
-      } else if (type == "video") {
-        typeFile = "video";
-      } else if (type == "invalid") {
-        typeFile = "invalid";
-      }
-      // else if (type == "documents") {
-      //   typeFile = "document";
-      // }
+	Promise.all(
+		data.map(async (element) => {
+			// Присвоение типа отправляемых данных
+			let typeFile;
+			if (type == "image") {
+				typeFile = "photo";
+			} else if (type == "video") {
+				typeFile = "video";
+			} else if (type == "invalid") {
+				typeFile = "invalid";
+			}
 
-      // Получаем ссылку на файл
-      const val = await getFile(encodeURIComponent(element.path.split(":")[1]));
-      return {
-        type: typeFile,
-        media: val,
-      };
-    })
-  ).then((array) => {
-    // фильтрация форматов (из-за Telegram-ограничений на групповые отправки) !отключена
-    if (array.length !== 0) {
-      // let filteredArray;
-      // if (type == "image") {
-      //   filteredArray = array.filter((element) => {
-      //     return /type=image\%2Fjpeg/.test(element.media);
-      //   });
-      // } else if (type == "video") {
-      //   filteredArray = array.filter((element) => {
-      //     return /type=video\%2F(mp4|mov|avi|mkv|webm|mpeg|3gp|flv)/.test(element.media);
-      //   });
-      // } else filteredArray = array;
+			// Получаем ссылку на файл
+			const val = await getFile(encodeURIComponent(element.path.split(":")[1]));
+			return {
+				type: typeFile,
+				media: val,
+			};
+		})
+	).then((array) => {
+		if (array.length !== 0) {
+			// разбивка на блоки по 10 элементов (ограничение sendMediaGroup)
+			let arrayBlocksElement = [];
+			for (let i = 0; i < array.length; i += 10) {
+				arrayBlocksElement.push(array.slice(i, i + 10));
+			}
+			//отправка каждого блока в чат
+			arrayBlocksElement.forEach((block) => {
+				sendDataToTg(block);
+			});
+		}
+	});
+}
 
-      // const filteredArray = array.filter((element) => {
-      //   console.log(type);
-      //   if (type == "image") {
-      //     // console.log(/type=image\%2Fjpeg/.test(element.media));
-      //     return /type=image\%2Fjpeg/.test(element.media);
-      //   } else if (type == "video") {
-      //     return element.media.match(/type=video\%2F(mp4|mov|avi|mkv|webm|mpeg|3gp|flv)/);
-      //   }
-      // });
+// определение ночного времени во всех часовых поясах
+function checkTime() {
+	const dayStart = 9;
+	const dayEnd = 22;
+	const timeZones = [3, 4, 1]; //Часовые пояса Москва (+3), Тбилиси(+4), Мадрид(+1)
+	const currentDate = new Date();
+	const currentHourUTC = currentDate.getUTCHours();
 
-      // разбивка на блоки по 10 элементов (ограничение sendMediaGroup)
-      let arrayBlocksElement = [];
-      for (let i = 0; i < array.length; i += 10) {
-        arrayBlocksElement.push(array.slice(i, i + 10));
-      }
-      // console.log(arrayBlocksElement);
-
-      //отправка каждого блока в чат
-      arrayBlocksElement.forEach((block) => {
-        sendDataToTg(block);
-      });
-    }
-  });
+	if (Math.min(...timeZones) + currentHourUTC >= dayStart && currentHourUTC + Math.max(...timeZones) < dayEnd) {
+		console.log("day");
+		return "day";
+	} else {
+		console.log("night");
+		return "night";
+	}
 }
 
 //Отправка контента
-function sendDataToTg(data) {
-  if (data[0].type != "invalid") {
-    bot.telegram.sendMediaGroup(chat_id, JSON.stringify(data));
-  }
+async function sendDataToTg(data) {
+	// Отправляем контент без уведомления
+	if (data[0].type != "invalid") {
+		await bot.telegram.sendMediaGroup(chat_id, JSON.stringify(data), {
+			disable_notification: true,
+		});
+	}
 }
 
-export function sendFirstMessage(message) {
-  bot.telegram.sendMessage(chat_id, message, { parse_mode: "HTML" });
+export async function sendFirstMessage(message) {
+	//В ночное время отправка без уведомления
+	await bot.telegram.sendMessage(chat_id, message, { parse_mode: "HTML", disable_notification: `${checkTime() == "night" ? true : false}` });
 }
