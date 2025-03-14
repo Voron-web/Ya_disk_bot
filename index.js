@@ -5,7 +5,7 @@ import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 import { setInterval } from "timers";
 import winston from "winston";
 
-const limitLastItems = 30; //Лимит количества последних файлов в запросе
+const limitLastItems = 100; //Лимит количества последних файлов в запросе
 const scanInterval = 10; //Интервал сканирования в мин
 const awaitInterwal = 2; //Интервал между проходами в мин
 let firstCheck = true; // Флаг первого прохода
@@ -31,6 +31,8 @@ try {
 
 // Основная функция для периодического сканирования Яндекс.Диска
 function startScanDisk() {
+	console.log(getTimeStamp(), "Start scan disc");
+
 	setInterval(() => {
 		lastYaFilesAdded(limitLastItems).then((obj) => checkArr(obj));
 	}, scanInterval * 60000);
@@ -43,21 +45,19 @@ async function checkArr(newData) {
 		if (newData.items[0].name !== readSettingFile().lastFile) {
 			lastFile = newData.items[0].name;
 			firstCheck = false;
-
+			console.log(getTimeStamp(), "New data find. Waiting...");
 			// Запускаем второй проход выждав интервал
 			setTimeout(() => {
-				console.log("timeOut");
 				lastYaFilesAdded(limitLastItems).then((obj) => checkArr(obj));
 			}, awaitInterwal * 60000);
 		} else {
-			console.log(Date.now().toString(), "No new data");
+			console.log(getTimeStamp(), "No new data");
 		}
 	} else {
 		// Проверка второго и последующих проходов(в случае процесса загрузки новых файлов на диск)
-		console.log("New data find. Waiting...");
 		if (newData.items[0].name !== lastFile) {
 			lastFile = newData.items[0].name;
-
+			console.log(getTimeStamp(), "New data find. Waiting...");
 			setTimeout(() => {
 				lastYaFilesAdded(limitLastItems).then((obj) => checkArr(obj));
 			}, awaitInterwal * 60000);
@@ -69,10 +69,10 @@ async function checkArr(newData) {
 			const filtredObj = filterRequest(newData, readSettingFile().lastUpdate);
 
 			if (filtredObj.image.length + filtredObj.video.length + filtredObj.invalid.length > 0) {
-				console.log("No new updates found. Send data to messenger");
+				console.log(getTimeStamp(), "No new updates found. Send data to messenger");
 				createTgDataObject(filtredObj); // Отправляем новые файлы в Telegram
 			} else {
-				console.log("All new files are invalid");
+				console.log(getTimeStamp(), "All new files are invalid");
 			}
 			rewriteSettingFile(requestData); // Записываем обновленные данные в файл json
 			resetToDefault(); // Сбрасываем параметры
@@ -96,4 +96,9 @@ function resetToDefault() {
 	firstCheck = true;
 	lastFile = "";
 	requestData = {};
+}
+
+function getTimeStamp() {
+	const currentDate = new Date();
+	return currentDate.toString();
 }
