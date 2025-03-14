@@ -54,10 +54,8 @@ function checkTime() {
 	const currentHourUTC = currentDate.getUTCHours();
 
 	if (Math.min(...timeZones) + currentHourUTC >= dayStart && currentHourUTC + Math.max(...timeZones) < dayEnd) {
-		console.log("day");
 		return "day";
 	} else {
-		console.log("night");
 		return "night";
 	}
 }
