@@ -21,7 +21,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 root@85.159.230.136 << 'EOF'
             cd ~/ya_bot
-            git pull origin main
+            git pull origin master
             npm i
             systemctl restart ya_bot.service
           EOF
