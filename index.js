@@ -5,7 +5,7 @@ import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 import { setInterval } from "timers";
 import winston from "winston";
 
-const limitLastItems = 30; //Лимит количества последних файлов в запросе
+const limitLastItems = 100; //Лимит количества последних файлов в запросе
 const scanInterval = 10; //Интервал сканирования в мин
 const awaitInterwal = 2; //Интервал между проходами в мин
 let firstCheck = true; // Флаг первого прохода
