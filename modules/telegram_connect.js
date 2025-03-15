@@ -1,5 +1,6 @@
 import { Telegraf } from "telegraf";
 import { getFile } from "./ya_request.js";
+import { getTimeStamp } from "../index.js";
 import "dotenv/config";
 
 const bot = new Telegraf(process.env.BOT_TOKEN); //Получаем токен бота
@@ -30,19 +31,21 @@ export function createDataToSend(data, type) {
 				media: val,
 			};
 		})
-	).then((array) => {
-		if (array.length !== 0) {
-			// разбивка на блоки по 10 элементов (ограничение sendMediaGroup)
-			let arrayBlocksElement = [];
-			for (let i = 0; i < array.length; i += 10) {
-				arrayBlocksElement.push(array.slice(i, i + 10));
+	)
+		.then((array) => {
+			if (array.length !== 0) {
+				// разбивка на блоки по 10 элементов (ограничение sendMediaGroup)
+				let arrayBlocksElement = [];
+				for (let i = 0; i < array.length; i += 10) {
+					arrayBlocksElement.push(array.slice(i, i + 10));
+				}
+				// отправляем файлы в чат
+				sendDataToTg(arrayBlocksElement);
 			}
-			//отправка каждого блока в чат
-			arrayBlocksElement.forEach((block) => {
-				sendDataToTg(block);
-			});
-		}
-	});
+		})
+		.then(() => {
+			console.error(getTimeStamp(), "Отправка завершена");
+		});
 }
 
 // определение ночного времени во всех часовых поясах
@@ -60,13 +63,22 @@ function checkTime() {
 	}
 }
 
-//Отправка контента
-async function sendDataToTg(data) {
-	// Отправляем контент без уведомления
-	if (data[0].type != "invalid") {
-		await bot.telegram.sendMediaGroup(chat_id, JSON.stringify(data), {
-			disable_notification: true,
-		});
+async function sendDataToTg(dataBlocks) {
+	for (const block of dataBlocks) {
+		await new Promise((resolve) => setTimeout(resolve, 1000)); // Задержка перед отправкой
+		try {
+			await bot.telegram.sendMediaGroup(chat_id, block, { disable_notification: true });
+			console.log(getTimeStamp(), "Медиа-группа отправлена.");
+		} catch (error) {
+			if (error.response && error.response.error_code === 429) {
+				const retryAfter = error.response.parameters.retry_after;
+				console.log(getTimeStamp(), `Слишком много запросов! Ждем ${retryAfter} секунд...`);
+				await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+				await sendDataToTg([block]); // Повторяем отправку только этого блока
+			} else {
+				console.error(getTimeStamp(), "Ошибка отправки:", error.message);
+			}
+		}
 	}
 }
 
