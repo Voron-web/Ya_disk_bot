@@ -1,6 +1,4 @@
-import { error, log } from "console";
 import logger from "../index.js";
-import { message } from "telegraf/filters";
 const token = process.env.YA_TOKEN;
 const folderPath = String(process.env.FOLDER); //имя папки для фильтра результатов запроса
 

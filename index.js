@@ -1,5 +1,9 @@
-import "dotenv/config";
-import { initTG, createDataToSend, sendFirstMessage } from "./modules/telegram_connect.js";
+// import dotenv from "dotenv";
+// import "dotenv/config";
+
+// dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
+
+import { initTG, createDataToSend, sendFirstMessage, getTimeStamp } from "./modules/telegram_connect.js";
 import { filterRequest, lastYaFilesAdded, getFolderLink } from "./modules/ya_request.js";
 import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 import { setInterval } from "timers";
@@ -19,6 +23,8 @@ const logger = winston.createLogger({
 });
 export default logger;
 
+// const bot = new Telegraf(process.env.BOT_TOKEN); //Получаем токен бота
+
 // Инициализация Telegram-бота
 
 initTG();
@@ -35,11 +41,13 @@ function startScanDisk() {
 
 	setInterval(() => {
 		lastYaFilesAdded(limitLastItems).then((obj) => checkArr(obj));
-	}, scanInterval * 60000);
+	}, scanInterval * 6000);
 }
 
 // Проверяет массив новых файлов и определяет, есть ли обновления
 async function checkArr(newData) {
+	console.log("scan");
+
 	if ("items" in newData) {
 		if (firstCheck) {
 			// Если это первый проход, проверяем, изменился ли последний файл с последней проверки
@@ -100,9 +108,4 @@ function resetToDefault() {
 	firstCheck = true;
 	lastFile = "";
 	requestData = {};
-}
-
-export function getTimeStamp() {
-	const currentDate = new Date();
-	return currentDate.toString();
 }

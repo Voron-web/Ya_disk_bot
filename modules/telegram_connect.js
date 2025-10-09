@@ -1,7 +1,9 @@
 import { Telegraf } from "telegraf";
 import { getFile } from "./ya_request.js";
-import { getTimeStamp } from "../index.js";
-import "dotenv/config";
+// import { getTimeStamp } from "../index.js";
+// import "dotenv/config";
+
+console.log(process.env.BOT_TOKEN);
 
 const bot = new Telegraf(process.env.BOT_TOKEN); //Получаем токен бота
 const chat_id = process.env.CHAT_ID; //получаем id чата, в который будут отправляться данные
@@ -9,6 +11,7 @@ const chat_id = process.env.CHAT_ID; //получаем id чата, в кото
 // Инициализация и запуск бота
 export function initTG() {
 	bot.launch();
+	bot.start((ctx) => ctx.reply(ctx.message.chat.id));
 }
 
 export function createDataToSend(data, type) {
@@ -85,4 +88,9 @@ async function sendDataToTg(dataBlocks) {
 export async function sendFirstMessage(message) {
 	//В ночное время отправка без уведомления
 	await bot.telegram.sendMessage(chat_id, message, { parse_mode: "HTML", disable_notification: `${checkTime() == "night" ? true : false}` });
+}
+
+export function getTimeStamp() {
+	const currentDate = new Date();
+	return currentDate.toString();
 }
