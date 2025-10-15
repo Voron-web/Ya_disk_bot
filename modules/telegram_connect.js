@@ -1,54 +1,85 @@
 import { Telegraf } from "telegraf";
-import { getFile } from "./ya_request.js";
-// import { getTimeStamp } from "../index.js";
-// import "dotenv/config";
+import { getFile, getFolderLink } from "./ya_request.js";
+import { convertInvalidVideo } from "./video_converter.js";
+import fs from "fs";
 
 console.log(process.env.BOT_TOKEN);
 
-const bot = new Telegraf(process.env.BOT_TOKEN); //Получаем токен бота
+const bot = new Telegraf(process.env.BOT_TOKEN);
 const chat_id = process.env.CHAT_ID; //получаем id чата, в который будут отправляться данные
 
-// Инициализация и запуск бота
+// telegram bot initialization and start
 export function initTG() {
 	bot.launch();
 	bot.start((ctx) => ctx.reply(ctx.message.chat.id));
 }
 
-export function createDataToSend(data, type) {
-	Promise.all(
-		data.map(async (element) => {
-			// Присвоение типа отправляемых данных
-			let typeFile;
-			if (type == "image") {
-				typeFile = "photo";
-			} else if (type == "video") {
-				typeFile = "video";
-			} else if (type == "invalid") {
-				typeFile = "invalid";
-			}
+/**
+ * Create array included telegram objects
+ *
+ * @param {Object} data - separated object by type
+ * @returns {Array}
+ * @example
+ * [
+ *  [
+ *   {
+ *     type: "video",
+ *     media: "ReadStream",
+ *   }
+ *  ],
+ *  [
+ *   {
+ *     type: "image",
+ *     media: 'https:yadisk.com...',
+ *   },
+ *   {
+ *     type: "image",
+ *     media: 'https:yadisk.com...'
+ *   }
+ *  ]
+ * ]
+ *
+ */
 
-			// Получаем ссылку на файл
-			const val = await getFile(encodeURIComponent(element.path.split(":")[1]));
-			return {
-				type: typeFile,
-				media: val,
-			};
-		})
-	)
-		.then((array) => {
-			if (array.length !== 0) {
-				// разбивка на блоки по 10 элементов (ограничение sendMediaGroup)
-				let arrayBlocksElement = [];
-				for (let i = 0; i < array.length; i += 10) {
-					arrayBlocksElement.push(array.slice(i, i + 10));
+export async function createDataToSend(data) {
+	let tgObjectsArray = [];
+
+	for (let key in data) {
+		await Promise.all(
+			data[key].map(async (element) => {
+				// Get file downloading link
+				const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
+				if (key === "image" || key === "video") {
+					return {
+						type: key,
+						media: fileLink,
+					};
+				} else if (key == "invalidVideos" || key == "invalidImages") {
+					if (key == "invalidVideos") {
+						return {
+							type: "video",
+							media: { source: fs.createReadStream(await convertInvalidVideo(fileLink)) },
+						};
+					}
+					// TODO: else if(type == "invalidImages"){}
 				}
-				// отправляем файлы в чат
-				sendDataToTg(arrayBlocksElement);
+			})
+		).then(async (array) => {
+			if (array.length !== 0) {
+				// divide array to blocks for sendMediaGroup directive (max 10 files & 50Mb for group)
+				let blockLength = 10;
+				if (key == "video" || key == "invalidVideos") {
+					blockLength = 1;
+				}
+
+				for (let i = 0; i < array.length; i += blockLength) {
+					const block = array.slice(i, i + blockLength);
+					tgObjectsArray.push(block);
+				}
 			}
-		})
-		.then(() => {
-			console.error(getTimeStamp(), "Отправка завершена");
 		});
+	}
+	return tgObjectsArray;
 }
 
 // определение ночного времени во всех часовых поясах
@@ -66,9 +97,19 @@ function checkTime() {
 	}
 }
 
-async function sendDataToTg(dataBlocks) {
+/**
+ * Send files blocks to telegram chat
+ *
+ * @param {Array} dataBlocks - array of telegram data to send
+ */
+
+export async function sendDataToTg(dataBlocks) {
+	const folderLink = await getFolderLink();
+	sendFirstMessage(`На ЯндексДиск загружены новые медиа-файлы.\n Посмотреть <b><a href="${folderLink}">все файлы</a></b>`);
+
 	for (const block of dataBlocks) {
 		await new Promise((resolve) => setTimeout(resolve, 1000)); // Задержка перед отправкой
+
 		try {
 			await bot.telegram.sendMediaGroup(chat_id, block, { disable_notification: true });
 			console.log(getTimeStamp(), "Медиа-группа отправлена.");
