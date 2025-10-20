@@ -109,14 +109,14 @@ export function filterRequest(obj, timeStamp) {
 	// divide by groups
 	//Фильруем по типу файла, размеру и расширению
 	filteredArr.forEach((elem) => {
-		if (elem.media_type == "image" && /\S+\.(jpeg|jpg)$/gi.test(elem.name)) {
-			if (elem.size < image_size_limit) {
+		if (elem.media_type == "image" /* && /\S+\.(jpeg|jpg)$/gi.test(elem.name)*/) {
+			if (elem.size < image_size_limit && /\S+\.(jpeg|jpg)$/gi.test(elem.name)) {
 				groupElements.image.push(elem);
 			} else {
 				groupElements.invalidImages.push(elem);
 			}
 		} else if (elem.media_type == "video" /*&& /\S+\.mp4$/gi.test(elem.name)*/) {
-			if (elem.size < video_size_limit) {
+			if (elem.size < video_size_limit && /\S+\.mp4$/gi.test(elem.name)) {
 				groupElements.video.push(elem);
 			} else {
 				groupElements.invalidVideos.push(elem);

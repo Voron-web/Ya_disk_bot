@@ -2,6 +2,7 @@ import fs from "fs";
 import axios from "axios";
 import path from "path";
 import Ffmpeg from "fluent-ffmpeg";
+import { downloadFile } from "./services.js";
 
 export async function convertInvalidVideo(link) {
 	const filePath = await downloadFile(link);
@@ -10,41 +11,41 @@ export async function convertInvalidVideo(link) {
 	return convertedFilePath;
 }
 
-async function downloadFile(url, saveDir = "./downloads") {
-	try {
-		const response = await axios({
-			method: "GET",
-			url,
-			responseType: "arraybuffer",
-		});
+// async function downloadFile(url, saveDir = "./downloads") {
+// 	try {
+// 		const response = await axios({
+// 			method: "GET",
+// 			url,
+// 			responseType: "arraybuffer",
+// 		});
 
-		const mimeType = response.headers["content-type"];
-		if (!mimeType || (!mimeType.startsWith("image/") && !mimeType.startsWith("video/"))) {
-			console.log("⛔ Unsupported file type:", mimeType);
-			return null;
-		}
+// 		const mimeType = response.headers["content-type"];
+// 		if (!mimeType || (!mimeType.startsWith("image/") && !mimeType.startsWith("video/"))) {
+// 			console.log("⛔ Unsupported file type:", mimeType);
+// 			return null;
+// 		}
 
-		const ext = mimeType.split(";")[0].split("/")[1];
+// 		const ext = mimeType.split(";")[0].split("/")[1];
 
-		// create folder
-		if (!fs.existsSync(saveDir)) {
-			fs.mkdirSync(saveDir, { recursive: true });
-		}
+// 		// create folder
+// 		if (!fs.existsSync(saveDir)) {
+// 			fs.mkdirSync(saveDir, { recursive: true });
+// 		}
 
-		const fileName = `${Date.now()}.${ext}`;
-		const filePath = path.join(saveDir, fileName);
+// 		const fileName = `${Date.now()}.${ext}`;
+// 		const filePath = path.join(saveDir, fileName);
 
-		// save file
-		console.log("Скачивание файла ");
-		fs.writeFileSync(filePath, response.data);
+// 		// save file
+// 		console.log("Скачивание файла ");
+// 		fs.writeFileSync(filePath, response.data);
 
-		console.log("Скачивание файла завершено ");
+// 		console.log("Скачивание файла завершено ");
 
-		return filePath;
-	} catch (error) {
-		console.error("❌ Ошибка при скачивании:", error.message);
-	}
-}
+// 		return filePath;
+// 	} catch (error) {
+// 		console.error("❌ Ошибка при скачивании:", error.message);
+// 	}
+// }
 
 async function convertToMp4(inputPath, outputDir = "./downloads/converted") {
 	return new Promise((resolve, reject) => {

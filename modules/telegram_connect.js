@@ -2,6 +2,7 @@ import { Telegraf } from "telegraf";
 import { getFile, getFolderLink } from "./ya_request.js";
 import { convertInvalidVideo } from "./video_converter.js";
 import fs from "fs";
+import { convertInvalidImage } from "./imageConverter.js";
 
 console.log(process.env.BOT_TOKEN);
 
@@ -46,34 +47,48 @@ export async function createDataToSend(data) {
 
 	for (let key in data) {
 		await Promise.all(
-			data[key].map(async (element) => {
-				// Get file downloading link
-				const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
-				if (key === "image" || key === "video") {
-					return {
-						type: key,
-						media: fileLink,
-					};
-				} else if (key == "invalidVideos" || key == "invalidImages") {
-					if (key == "invalidVideos") {
+			data[key]
+				.map(async (element) => {
+					// Get file downloading link
+					const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
+					if (key === "photo" || key === "video") {
 						return {
-							type: "video",
-							media: { source: fs.createReadStream(await convertInvalidVideo(fileLink)) },
+							type: key,
+							media: fileLink,
 						};
+					} else if (key == "invalidVideos" || key == "invalidImages") {
+						if (key == "invalidVideos") {
+							const convertedFilePath = await convertInvalidVideo(fileLink);
+							if (convertedFilePath) {
+								return {
+									type: "video",
+									media: { source: fs.createReadStream(convertedFilePath) },
+								};
+							}
+						} else {
+							const convertedFilePath = await convertInvalidImage(fileLink);
+							if (convertedFilePath) {
+								return {
+									type: "photo",
+									media: { source: fs.createReadStream(convertedFilePath) },
+								};
+							}
+						}
+						// TODO: else if(type == "invalidImages"){}
 					}
-					// TODO: else if(type == "invalidImages"){}
-				}
-			})
+				})
+				.filter(Boolean)
 		).then(async (array) => {
-			if (array.length !== 0) {
+			const filteredArray = array.filter(Boolean);
+			if (filteredArray.length !== 0) {
 				// divide array to blocks for sendMediaGroup directive (max 10 files & 50Mb for group)
 				let blockLength = 10;
 				if (key == "video" || key == "invalidVideos") {
 					blockLength = 1;
 				}
 
-				for (let i = 0; i < array.length; i += blockLength) {
-					const block = array.slice(i, i + blockLength);
+				for (let i = 0; i < filteredArray.length; i += blockLength) {
+					const block = filteredArray.slice(i, i + blockLength);
 					tgObjectsArray.push(block);
 				}
 			}
