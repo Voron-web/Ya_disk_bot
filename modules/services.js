@@ -35,5 +35,6 @@ export async function downloadFile(url, saveDir = "./downloads") {
 		return filePath;
 	} catch (error) {
 		console.error("❌ Ошибка при скачивании:", error.message);
+		throw error;
 	}
 }

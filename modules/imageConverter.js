@@ -2,11 +2,19 @@ import sharp from "sharp";
 import { downloadFile } from "./services.js";
 import fs from "fs";
 import path from "path";
+import convert from "heic-convert";
 
 export async function convertInvalidImage(link) {
-	const filePath = await downloadFile(link);
+	let filePath = await downloadFile(link);
+	const fileName = path.basename(link, path.extname(link));
+
+	if (/.heic$/i.test(filePath)) {
+		const buffer = fs.readFileSync(filePath);
+		filePath = await convertHeic(buffer, fileName);
+	}
 	const convertedFilePath = await convertToJpeg(filePath);
 	console.log(convertedFilePath);
+
 	return convertedFilePath;
 
 	// TODO: add HEIC format converter
@@ -46,4 +54,20 @@ async function convertProcess(inputPath, quality) {
 		})
 		.toBuffer();
 	return data;
+}
+
+async function convertHeic(buffer, fileName, outputPath = "./downloads") {
+	try {
+		const outputBuffer = await convert({
+			buffer: buffer,
+			format: "JPEG",
+			quality: 1,
+		});
+		const fullPath = path.join(outputPath + `${fileName}.jpg`);
+		fs.writeFileSync(fullPath, outputBuffer);
+		return fullPath;
+	} catch (error) {
+		console.error("Error convert HEIC file:", error);
+		throw error;
+	}
 }

@@ -3,6 +3,7 @@ import { filterRequest, lastYaFilesAdded } from "./modules/ya_request.js";
 import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 import { setInterval } from "timers";
 import winston from "winston";
+import fs from "fs";
 
 const limitLastItems = 100; //Лимит количества последних файлов в запросе
 const scanInterval = 0.5; //Интервал сканирования в мин (def: 10)
@@ -88,19 +89,22 @@ async function checkArr(newData) {
 				} else {
 					console.log(getTimeStamp(), "No new updates found");
 				}
-				// temp!!!!!!!!!!!
-				// rewriteSettingFile(requestData); // Записываем обновленные данные в файл json
+				rewriteSettingFile(requestData); // Записываем обновленные данные в файл json
 				resetToDefault(); // Сбрасываем параметры
 			}
 		}
 	} else {
 		console.log(getTimeStamp(), "Ошибка запроса к ЯндксДиску");
+		resetToDefault();
 	}
 }
 
 // Сброс переменных в исходное состояние
 function resetToDefault() {
-	// TODO: add function to clear temp folder
+	fs.rmSync("./downloads", { recursive: true }, (err) => {
+		if (err) throw err;
+	});
+	fs.mkdirSync("./downloads", { recursive: true });
 	firstCheck = true;
 	lastFile = "";
 	requestData = {};
