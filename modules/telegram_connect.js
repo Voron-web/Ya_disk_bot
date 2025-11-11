@@ -3,7 +3,10 @@ import { getFile, getFolderLink } from "./ya_request.js";
 import { convertInvalidVideo } from "./video_converter.js";
 import fs from "fs";
 import { convertInvalidImage } from "./imageConverter.js";
+import { checkTime } from "./services.js";
 
+console.log(process.env.NODE_ENV);
+console.log(process.env.DOTENV_CONFIG_PATH );
 console.log(process.env.BOT_TOKEN);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -47,37 +50,36 @@ export async function createDataToSend(data) {
 
 	for (let key in data) {
 		await Promise.all(
-			data[key]
-				.map(async (element) => {
-					// Get file downloading link
-					const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
-					if (key === "photo" || key === "video") {
-						return {
-							type: key,
-							media: fileLink,
-						};
-					} else if (key == "invalidVideos" || key == "invalidImages") {
-						if (key == "invalidVideos") {
-							const convertedFilePath = await convertInvalidVideo(fileLink);
-							if (convertedFilePath) {
-								return {
-									type: "video",
-									media: { source: fs.createReadStream(convertedFilePath) },
-								};
-							}
-						} else {
-							const convertedFilePath = await convertInvalidImage(fileLink);
-							if (convertedFilePath) {
-								return {
-									type: "photo",
-									media: { source: fs.createReadStream(convertedFilePath) },
-								};
-							}
+			data[key].map(async (element) => {
+				// Get file downloading link
+				const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
+				if (key === "image" || key === "video") {
+					return {
+						type: key === "image" ? "photo" : key,
+						media: fileLink,
+					};
+				} else if (key == "invalidVideos" || key == "invalidImages") {
+					if (key == "invalidVideos") {
+						const convertedFilePath = await convertInvalidVideo(fileLink);
+						if (convertedFilePath) {
+							return {
+								type: "video",
+								media: { source: fs.createReadStream(convertedFilePath) },
+							};
 						}
-						// TODO: else if(type == "invalidImages"){}
+					} else {
+						const convertedFilePath = await convertInvalidImage(fileLink);
+						if (convertedFilePath) {
+							return {
+								type: "photo",
+								media: { source: fs.createReadStream(convertedFilePath) },
+							};
+						}
 					}
-				})
-				.filter(Boolean)
+					// TODO: else if(type == "invalidImages"){}
+				}
+			})
+			// .filter(Boolean)
 		).then(async (array) => {
 			const filteredArray = array.filter(Boolean);
 			if (filteredArray.length !== 0) {
@@ -95,21 +97,6 @@ export async function createDataToSend(data) {
 		});
 	}
 	return tgObjectsArray;
-}
-
-// определение ночного времени во всех часовых поясах
-function checkTime() {
-	const dayStart = 9;
-	const dayEnd = 22;
-	const timeZones = [3, 4, 1]; //Часовые пояса Москва (+3), Тбилиси(+4), Мадрид(+1)
-	const currentDate = new Date();
-	const currentHourUTC = currentDate.getUTCHours();
-
-	if (Math.min(...timeZones) + currentHourUTC >= dayStart && currentHourUTC + Math.max(...timeZones) < dayEnd) {
-		return "day";
-	} else {
-		return "night";
-	}
 }
 
 /**

@@ -1,0 +1,10 @@
+.env*
+node_modules/
+my-docs/
+downloads/*
+.vs-code/
+.github/
+error.log
+.gitignore
+data.json
+Dockerfile

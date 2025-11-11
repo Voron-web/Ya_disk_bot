@@ -6,8 +6,8 @@ import winston from "winston";
 import fs from "fs";
 
 const limitLastItems = 100; //Лимит количества последних файлов в запросе
-const scanInterval = 0.5; //Интервал сканирования в мин (def: 10)
-const awaitInterwal = 0.1; //Интервал между проходами в мин (def: 2)
+const scanInterval = 10; //Интервал сканирования в мин (def: 10)
+const awaitInterwal = 2; //Интервал между проходами в мин (def: 2)
 let firstCheck = true; // Флаг первого прохода
 let lastFile = ""; // Последний обработанный файл
 let requestData = {}; // Данные последнего запроса
@@ -101,12 +101,18 @@ async function checkArr(newData) {
 
 // Сброс переменных в исходное состояние
 function resetToDefault() {
-	fs.rmSync("./downloads", { recursive: true }, (err) => {
-		if (err) throw err;
-	});
-	fs.mkdirSync("./downloads", { recursive: true });
+	clearFolder("./downloads");
 	firstCheck = true;
 	lastFile = "";
 	requestData = {};
 	cicleIsFinished = true;
+}
+
+function clearFolder(path) {
+	if (fs.existsSync(path)) {
+		if (fs.readdirSync(path).length > 0) {
+			fs.rmSync(path, { recursive: true, force: true });
+		} else return;
+	}
+	fs.mkdirSync(path, { recursive: true });
 }

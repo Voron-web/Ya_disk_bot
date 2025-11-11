@@ -38,3 +38,18 @@ export async function downloadFile(url, saveDir = "./downloads") {
 		throw error;
 	}
 }
+
+// определение ночного времени во всех часовых поясах
+export function checkTime() {
+	const dayStart = 9;
+	const dayEnd = 22;
+	const timeZones = [3, 4, 1]; //Часовые пояса Москва (+3), Тбилиси(+4), Мадрид(+1)
+	const currentDate = new Date();
+	const currentHourUTC = currentDate.getUTCHours();
+
+	if (Math.min(...timeZones) + currentHourUTC >= dayStart && currentHourUTC + Math.max(...timeZones) < dayEnd) {
+		return "day";
+	} else {
+		return "night";
+	}
+}

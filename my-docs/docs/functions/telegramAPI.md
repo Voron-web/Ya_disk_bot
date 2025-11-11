@@ -5,6 +5,8 @@
 *   [createDataToSend][1]
     *   [Parameters][2]
     *   [Examples][3]
+*   [sendDataToTg][4]
+    *   [Parameters][5]
 
 ## createDataToSend
 
@@ -12,7 +14,7 @@ Create array included telegram objects
 
 ### Parameters
 
-*   `data` **[Object][4]** separated object by type
+*   `data` **[Object][6]** separated object by type
 
 ### Examples
 
@@ -37,7 +39,15 @@ Create array included telegram objects
 ]
 ```
 
-Returns **[Array][5]**&#x20;
+Returns **[Array][7]**&#x20;
+
+## sendDataToTg
+
+Send files blocks to telegram chat
+
+### Parameters
+
+*   `dataBlocks` **[Array][7]** array of telegram data to send
 
 [1]: #createdatatosend
 
@@ -45,6 +55,10 @@ Returns **[Array][5]**&#x20;
 
 [3]: #examples
 
-[4]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[4]: #senddatatotg
 
-[5]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[5]: #parameters-1
+
+[6]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+
+[7]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array

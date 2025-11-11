@@ -8,7 +8,7 @@
 
 ## startScanDisk
 
-Main cicle
+Main cycle
 
 ## checkArr
 
