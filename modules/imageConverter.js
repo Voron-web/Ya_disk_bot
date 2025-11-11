@@ -63,7 +63,7 @@ async function convertHeic(buffer, fileName, outputPath = "./downloads") {
 			format: "JPEG",
 			quality: 1,
 		});
-		const fullPath = path.join(outputPath + `${fileName}.jpg`);
+		const fullPath = path.join(outputPath, `${fileName}.jpg`);
 		fs.writeFileSync(fullPath, outputBuffer);
 		return fullPath;
 	} catch (error) {
