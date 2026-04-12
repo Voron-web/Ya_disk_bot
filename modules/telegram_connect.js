@@ -105,9 +105,11 @@ export async function createDataToSend(data) {
  * @param {Array} dataBlocks - array of telegram data to send
  */
 
-export async function sendDataToTg(dataBlocks) {
-	const folderLink = await getFolderLink();
-	sendFirstMessage(`На ЯндексДиск загружены новые медиа-файлы.\n Посмотреть <b><a href="${folderLink}">все файлы</a></b>`);
+export async function sendDataToTg(dataBlocks, isRetry = false) {
+	if (!isRetry) {
+		const folderLink = await getFolderLink();
+		await sendFirstMessage(`На ЯндексДиск загружены новые медиа-файлы.\n Посмотреть <b><a href="${folderLink}">все файлы</a></b>`);
+	}
 
 	for (const block of dataBlocks) {
 		await new Promise((resolve) => setTimeout(resolve, 1000)); // Задержка перед отправкой
@@ -120,7 +122,7 @@ export async function sendDataToTg(dataBlocks) {
 				const retryAfter = error.response.parameters.retry_after;
 				console.log(getTimeStamp(), `Слишком много запросов! Ждем ${retryAfter} секунд...`);
 				await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-				await sendDataToTg([block]); // Повторяем отправку только этого блока
+				await sendDataToTg([block], true); // Повторяем отправку только этого блока
 			} else {
 				console.error(getTimeStamp(), "Ошибка отправки:", error.message);
 			}

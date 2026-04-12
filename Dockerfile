@@ -1,19 +1,19 @@
 FROM node:slim
 
 RUN apt-get update && \
-    apt-get install -y handbrake-cli && \
+    apt-get install -y ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm i
+RUN npm ci --omit=dev
 
 COPY . .
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 EXPOSE 3002
 
-CMD ["npm","run","dev_docker"]
+CMD ["npm","run","start"]
