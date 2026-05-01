@@ -6,22 +6,68 @@ on:
       - master
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ya_bot:latest
+
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.YA_BOT_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 85.159.230.136 >> ~/.ssh/known_hosts
+
+      - name: Port Knocking
+        run: |
+          sudo apt-get update && sudo apt-get install -y knockd
+          knock ${{ secrets.SERVER_HOST }} ${{ secrets.KNOCK_SEQUENCE }} -d 1000
+
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to server
         run: |
-          ssh -i ~/.ssh/id_ed25519 root@85.159.230.136 << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+
             cd ~/ya_bot
-            git pull origin main
-            npm i
-            systemctl restart ya_bot.service
+
+            # Останавливаем и удаляем старый контейнер
+            docker stop ya_bot || true
+            docker rm ya_bot || true
+            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/ya_bot:latest || true
+
+            # Скачиваем новый образ
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ya_bot:latest
+
+            # Запускаем новый контейнер
+            docker run -d \
+              -v ./error.log:/app/error.log \
+              -v ./data.json:/app/data.json \
+              -v ./.env:/app/.env.production \
+              -e NODE_ENV=production \
+              --log-opt max-size=50m \
+              --log-opt max-file=3 \
+              --name ya_bot \
+              --restart unless-stopped \
+              ${{ secrets.DOCKERHUB_USERNAME }}/ya_bot:latest
+
+            # Чистим неиспользуемые образы
+            docker image prune -f
           EOF
