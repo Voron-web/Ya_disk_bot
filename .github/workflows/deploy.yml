@@ -29,21 +29,23 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Port Knocking
-        run: |
-          sudo apt-get update && sudo apt-get install -y knockd
-          knock ${{ secrets.SERVER_HOST }} ${{ secrets.KNOCK_SEQUENCE }} -d 1000
-
-      - name: Add server to known hosts
-        run: |
-          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      - name: Install knock
+        run: sudo apt-get update && sudo apt-get install -y knockd
 
       - name: Deploy to server
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+          # Port knocking — открываем порт
+          knock ${{ secrets.SERVER_HOST }} ${{ secrets.KNOCK_SEQUENCE }} -d 1000
+          sleep 2
+
+          # Добавляем сервер в known_hosts
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Деплоим
+          ssh -T -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
 
             cd ~/ya_bot
@@ -71,3 +73,4 @@ jobs:
             # Чистим неиспользуемые образы
             docker image prune -f
           EOF
+
