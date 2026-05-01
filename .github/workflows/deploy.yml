@@ -31,6 +31,10 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          # Проверяем что ключ записался корректно
+          echo "Key size: $(wc -c < ~/.ssh/id_ed25519) bytes"
+          head -1 ~/.ssh/id_ed25519 | grep -q 'BEGIN' && echo 'Key header: OK' || echo 'Key header: MISSING'
+          tail -1 ~/.ssh/id_ed25519 | grep -q 'END' || tail -2 ~/.ssh/id_ed25519 | head -1 | grep -q 'END' && echo 'Key footer: OK' || echo 'Key footer: MISSING'
 
       - name: Install knock
         run: sudo apt-get update && sudo apt-get install -y knockd
@@ -45,7 +49,7 @@ jobs:
           ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
           # Деплоим
-          ssh -T -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -T -v -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
 
             cd ~/ya_bot
