@@ -1,0 +1,14 @@
+.env*
+node_modules/
+my-docs/
+my-docs/*
+downloads/*
+.vs-code/
+.github/
+error.log
+.gitignore
+data.json
+Dockerfile
+video_converter_handbrake.js
+.agents/
+.qwen/

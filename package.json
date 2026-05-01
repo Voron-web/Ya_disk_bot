@@ -4,16 +4,27 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "NODE_ENV=production DOTENV_CONFIG_PATH=./.env.production node -r dotenv/config index.js",
+    "dev": "NODE_ENV=development DOTENV_CONFIG_PATH=.env.development node -r dotenv/config index.js",
+    "dev_docker": "DOTENV_CONFIG_PATH=./.env.development node -r dotenv/config index.js",
+    "run_docker": "node -r dotenv/config index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:build": "npx documentation build ./index.js -f md -o my-docs/docs/functions/global.md --shallow && npx documentation build ./modules/telegram_connect.js -f md -o my-docs/docs/functions/telegramAPI.md --shallow && npx documentation build ./modules/ya_request.js -f md -o my-docs/docs/functions/yandexAPI.md --shallow",
+    "docker:dev": "docker run -d -p 3002:3002 -v ./error.log:/app/error.log -v ./data.json:/app/data.json -v ./.env.development:/app/.env.development -e NODE_ENV=development -e DOTENV_CONFIG_PATH=.env.development --name ya_bot artemvoronweb/ya_bot"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.12.2",
     "dotenv": "^16.4.7",
+    "heic-convert": "^2.1.0",
     "punycode": "^2.3.1",
+    "sharp": "^0.34.4",
     "telegraf": "^4.16.3",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "documentation": "^14.0.3"
   }
 }
