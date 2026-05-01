@@ -1,7 +1,15 @@
+/**
+ * Модуль вспомогательных сервисов (утилит).
+ *
+ * Содержит функции для:
+ * - Скачивания медиафайлов (изображений и видео) по URL.
+ * - Определения времени суток (день/ночь) с учетом различных часовых поясов.
+ */
 import axios from "axios";
 import fs from "fs";
 import path from "path";
 
+// Скачивание файла по ссылке
 export async function downloadFile(url, saveDir = "./downloads") {
 	try {
 		const response = await axios({

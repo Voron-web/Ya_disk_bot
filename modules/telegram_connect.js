@@ -6,7 +6,7 @@ import { convertInvalidImage } from "./imageConverter.js";
 import { checkTime } from "./services.js";
 
 console.log(process.env.NODE_ENV);
-console.log(process.env.DOTENV_CONFIG_PATH );
+console.log(process.env.DOTENV_CONFIG_PATH);
 console.log(process.env.BOT_TOKEN);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -76,9 +76,8 @@ export async function createDataToSend(data) {
 							};
 						}
 					}
-					// TODO: else if(type == "invalidImages"){}
 				}
-			})
+			}),
 			// .filter(Boolean)
 		).then(async (array) => {
 			const filteredArray = array.filter(Boolean);

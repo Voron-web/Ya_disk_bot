@@ -1,3 +1,12 @@
+/**
+ * Модуль для конвертации и сжатия видеофайлов.
+ *
+ * Включает функционал для:
+ * - Скачивания исходного видеофайла.
+ * - Перекодирования видео в формат MP4 с использованием ffmpeg.
+ * - Динамического расчета битрейта и рекурсивного сжатия для достижения размера файла не более 45 МБ.
+ * - Получения продолжительности видео с помощью ffprobe.
+ */
 import fs from "fs";
 import path from "path";
 // import hbjs from "handbrake-js";
@@ -7,7 +16,7 @@ import { spawn } from "child_process";
 export async function convertInvalidVideo(link) {
 	const filePath = await downloadFile(link);
 	const convertedFilePath = await convertToMp4(filePath);
-	console.log(convertedFilePath);
+	// console.log(convertedFilePath);
 	return convertedFilePath;
 }
 

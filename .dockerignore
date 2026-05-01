@@ -11,3 +11,4 @@ data.json
 Dockerfile
 video_converter_handbrake.js
 .agents/
+.qwen/
