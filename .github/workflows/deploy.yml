@@ -43,13 +43,10 @@ jobs:
         run: |
           # Port knocking — открываем порт
           knock ${{ secrets.SERVER_HOST }} ${{ secrets.KNOCK_SEQUENCE }} -d 1000
-          sleep 2
+          sleep 1
 
-          # Добавляем сервер в known_hosts
-          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-          # Деплоим
-          ssh -T -v -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+          # Деплоим (StrictHostKeyChecking=no т.к. ssh-keyscan съедает окно port knocking)
+          ssh -T -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
 
             cd ~/ya_bot
