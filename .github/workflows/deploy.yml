@@ -38,14 +38,16 @@ jobs:
 
       - name: Deploy to server
         run: |
-          # Port knocking через nc (полное TCP-соединение)
+          # Port knocking через nc
           for port in ${{ secrets.KNOCK_SEQUENCE }}; do
             nc -z -w1 ${{ secrets.SERVER_HOST }} $port 2>/dev/null || true
           done
           sleep 1
 
-          # Деплоим
-          ssh -T -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+          # Деплоим СРАЗУ
+          # Добавлен KexAlgorithms=curve25519-sha256 для отключения sntrup761x25519-sha512@openssh.com
+          # (Новый Post-Quantum алгоритм в OpenSSH 9.x генерирует огромные пакеты, которые дропаются NAT/Фаерволами)
+          ssh -T -o StrictHostKeyChecking=accept-new -o KexAlgorithms=curve25519-sha256,curve25519-sha256@libssh.org -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
 
             cd ~/ya_bot
