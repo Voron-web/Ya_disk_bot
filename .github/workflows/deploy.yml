@@ -36,17 +36,16 @@ jobs:
           head -1 ~/.ssh/id_ed25519 | grep -q 'BEGIN' && echo 'Key header: OK' || echo 'Key header: MISSING'
           tail -1 ~/.ssh/id_ed25519 | grep -q 'END' || tail -2 ~/.ssh/id_ed25519 | head -1 | grep -q 'END' && echo 'Key footer: OK' || echo 'Key footer: MISSING'
 
-      - name: Install knock
-        run: sudo apt-get update && sudo apt-get install -y knockd
-
       - name: Deploy to server
         run: |
-          # Port knocking — открываем порт
-          knock ${{ secrets.SERVER_HOST }} ${{ secrets.KNOCK_SEQUENCE }} -d 1000
+          # Port knocking через nc (полное TCP-соединение)
+          for port in ${{ secrets.KNOCK_SEQUENCE }}; do
+            nc -z -w1 ${{ secrets.SERVER_HOST }} $port 2>/dev/null || true
+          done
           sleep 1
 
-          # Деплоим (StrictHostKeyChecking=no т.к. ssh-keyscan съедает окно port knocking)
-          ssh -T -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
+          # Деплоим
+          ssh -T -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} git@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
 
             cd ~/ya_bot
@@ -74,4 +73,3 @@ jobs:
             # Чистим неиспользуемые образы
             docker image prune -f
           EOF
-
