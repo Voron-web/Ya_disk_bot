@@ -37,12 +37,15 @@ try {
 function startScanDisk() {
 	console.log(getTimeStamp(), "Start scan disc");
 
-	setInterval(async () => {
+	const scan = async () => {
 		if (cicleIsFinished) {
 			cicleIsFinished = false;
 			await lastYaFilesAdded(limitLastItems).then((obj) => checkArr(obj));
 		}
-	}, scanInterval * 60000);
+	};
+
+	scan(); // Запускаем первое сканирование сразу
+	setInterval(scan, scanInterval * 60000);
 }
 
 /**

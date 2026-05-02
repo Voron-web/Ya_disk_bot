@@ -1,7 +1,7 @@
 import logger from "../index.js";
-const token = process.env.YA_TOKEN;
+const token = process.env.YA_TOKEN ? (process.env.YA_TOKEN.startsWith("OAuth") ? process.env.YA_TOKEN : `OAuth ${process.env.YA_TOKEN}`) : "";
+if (!token) console.error("YA_TOKEN is missing or empty in the environment variables!");
 const folderPath = String(process.env.FOLDER); //имя папки для фильтра результатов запроса
-
 const image_size_limit = 5192448; //Лимит размера файла изображения на отправку в sendMediaGroup (для URL 5мб, для файла - 10мб)
 const video_size_limit = 20452352; //Лимит размера файла видео на отправку в sendMediaGroup (для URL 20мб, для файла - 50мб)
 
