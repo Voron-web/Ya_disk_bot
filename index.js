@@ -5,7 +5,7 @@ import { setInterval } from "timers";
 import winston from "winston";
 import fs from "fs";
 
-const limitLastItems = 100; //Лимит количества последних файлов в запросе
+const limitLastItems = 300; //Лимит количества последних файлов в запросе
 const scanInterval = 10; //Интервал сканирования в мин (def: 10)
 const awaitInterwal = 2; //Интервал между проходами в мин (def: 2)
 let firstCheck = true; // Флаг первого прохода
