@@ -33,6 +33,7 @@ async function convertToMp4(inputPath, outputDir = "./downloads/converted") {
 	const bitrate = Number(await calculateBitrate(inputPath));
 
 	const convertOptions = {
+		"-y": "",
 		"-i": inputPath,
 		"-vf": "scale='if(gt(a,1),640,-1)':'if(lt(a,1),640,-1)'",
 		"-c:a": "copy",
@@ -66,10 +67,12 @@ async function convertProcess(options, baseBitrate, count) {
 
 	const optionsArray = [];
 	for (const key in ffmpegOptions) {
-		if (key !== "output") {
-			optionsArray.push(key);
+		if (key === "output") {
 			optionsArray.push(ffmpegOptions[key].toString());
+		} else if (ffmpegOptions[key] === "") {
+			optionsArray.push(key);
 		} else {
+			optionsArray.push(key);
 			optionsArray.push(ffmpegOptions[key].toString());
 		}
 	}
