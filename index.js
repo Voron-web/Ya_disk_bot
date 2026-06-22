@@ -4,6 +4,11 @@ import { readSettingFile, rewriteSettingFile } from "./modules/json_rewrite.js";
 import { setInterval } from "timers";
 import winston from "winston";
 import fs from "fs";
+import dns from "dns";
+
+// У сервера сломан IPv6-доступ к api.telegram.org (соединение виснет ~60-120с и рвётся -> "socket hang up").
+// Форсируем порядок IPv4-first, чтобы Node не пытался ходить по нерабочему IPv6.
+dns.setDefaultResultOrder("ipv4first");
 
 const limitLastItems = 300; //Лимит количества последних файлов в запросе
 const scanInterval = 10; //Интервал сканирования в мин (def: 10)

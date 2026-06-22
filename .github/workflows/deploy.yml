@@ -66,7 +66,8 @@ jobs:
               -v ./data.json:/app/data.json \
               -v ./.env:/app/.env.production \
               -e NODE_ENV=production \
-              --memory=2048m \
+              --memory=2500m \
+              --cpus=2 \
               --log-opt max-size=50m \
               --log-opt max-file=3 \
               --name ya_bot \

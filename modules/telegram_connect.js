@@ -1,7 +1,7 @@
 import { Telegraf } from "telegraf";
+import https from "https";
 import { getFile, getFolderLink } from "./ya_request.js";
 import { convertInvalidVideo } from "./video_converter.js";
-import fs from "fs";
 import { convertInvalidImage } from "./imageConverter.js";
 import { checkTime } from "./services.js";
 
@@ -9,7 +9,11 @@ console.log(process.env.NODE_ENV);
 console.log(process.env.DOTENV_CONFIG_PATH);
 console.log(process.env.BOT_TOKEN);
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+// family: 4 — жёстко используем IPv4: у сервера не работает IPv6 до api.telegram.org.
+// keepAlive — переиспользуем соединения вместо нового хендшейка на каждый запрос/загрузку.
+const tgAgent = new https.Agent({ keepAlive: true, family: 4 });
+
+const bot = new Telegraf(process.env.BOT_TOKEN, { telegram: { agent: tgAgent } });
 const chat_id = process.env.CHAT_ID; //получаем id чата, в который будут отправляться данные
 
 // telegram bot initialization and start
@@ -105,7 +109,8 @@ async function buildTgElement(key, element) {
 		if (convertedFilePath) {
 			return {
 				type: "video",
-				media: { source: fs.createReadStream(convertedFilePath) },
+				// путь строкой, а не ReadStream: telegraf создаёт свежий поток на каждую попытку отправки
+				media: { source: convertedFilePath },
 			};
 		}
 	} else if (key == "invalidImages") {
@@ -116,7 +121,8 @@ async function buildTgElement(key, element) {
 		if (convertedFilePath) {
 			return {
 				type: "photo",
-				media: { source: fs.createReadStream(convertedFilePath) },
+				// путь строкой, а не ReadStream: telegraf создаёт свежий поток на каждую попытку отправки
+				media: { source: convertedFilePath },
 			};
 		}
 	}
@@ -137,20 +143,40 @@ export async function sendDataToTg(dataBlocks, isRetry = false) {
 
 	for (const block of dataBlocks) {
 		await new Promise((resolve) => setTimeout(resolve, 1000)); // Задержка перед отправкой
+		await sendBlockWithRetry(block);
+	}
+}
 
-		try {
-			await bot.telegram.sendMediaGroup(chat_id, block, { disable_notification: true });
-			console.log(getTimeStamp(), "Медиа-группа отправлена.");
-		} catch (error) {
-			if (error.response && error.response.error_code === 429) {
-				const retryAfter = error.response.parameters.retry_after;
-				console.log(getTimeStamp(), `Слишком много запросов! Ждем ${retryAfter} секунд...`);
-				await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-				await sendDataToTg([block], true); // Повторяем отправку только этого блока
-			} else {
-				console.error(getTimeStamp(), "Ошибка отправки:", error.message);
-			}
+/**
+ * Send single media block with retries for rate limits (429) and network errors (socket hang up).
+ *
+ * @param {Array} block - one telegram media group (1..10 elements)
+ * @param {number} attempt - current network-retry attempt
+ */
+async function sendBlockWithRetry(block, attempt = 1) {
+	const maxAttempts = 3;
+	try {
+		await bot.telegram.sendMediaGroup(chat_id, block, { disable_notification: true });
+		console.log(getTimeStamp(), "Медиа-группа отправлена.");
+	} catch (error) {
+		// 429 — слишком много запросов: ждём столько, сколько просит Telegram, попытку не тратим
+		if (error.response && error.response.error_code === 429) {
+			const retryAfter = error.response.parameters.retry_after;
+			console.log(getTimeStamp(), `Слишком много запросов! Ждем ${retryAfter} секунд...`);
+			await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+			return sendBlockWithRetry(block, attempt);
 		}
+
+		// Сетевой обрыв (socket hang up, ECONNRESET, ETIMEDOUT и т.п.) — у таких ошибок нет error.response
+		const isNetworkError = !error.response;
+		if (isNetworkError && attempt < maxAttempts) {
+			const delaySec = attempt * 5; // 5с, затем 10с
+			console.log(getTimeStamp(), `Сетевая ошибка (${error.message}). Повтор ${attempt}/${maxAttempts - 1} через ${delaySec}с...`);
+			await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
+			return sendBlockWithRetry(block, attempt + 1);
+		}
+
+		console.error(getTimeStamp(), "Ошибка отправки:", error.message);
 	}
 }
 
