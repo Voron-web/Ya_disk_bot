@@ -8,19 +8,21 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import { pipeline } from "stream/promises";
 
-// Скачивание файла по ссылке
+// Скачивание файла по ссылке (потоком, без загрузки целого файла в память)
 export async function downloadFile(url, saveDir = "./downloads") {
 	try {
 		const response = await axios({
 			method: "GET",
 			url,
-			responseType: "arraybuffer",
+			responseType: "stream",
 		});
 
 		const mimeType = response.headers["content-type"];
 		if (!mimeType || (!mimeType.startsWith("image/") && !mimeType.startsWith("video/"))) {
 			console.log("⛔ Unsupported file type:", mimeType);
+			response.data.destroy(); // освобождаем соединение, чтобы поток не висел
 			return null;
 		}
 
@@ -34,9 +36,9 @@ export async function downloadFile(url, saveDir = "./downloads") {
 		const fileName = `${Date.now()}.${ext}`;
 		const filePath = path.join(saveDir, fileName);
 
-		// save file
+		// save file — пишем поток напрямую на диск
 		console.log("Скачивание файла ");
-		fs.writeFileSync(filePath, response.data);
+		await pipeline(response.data, fs.createWriteStream(filePath));
 
 		console.log("Скачивание файла завершено ");
 

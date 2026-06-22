@@ -49,53 +49,78 @@ export async function createDataToSend(data) {
 	let tgObjectsArray = [];
 
 	for (let key in data) {
-		await Promise.all(
-			data[key].map(async (element) => {
-				// Get file downloading link
-				const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
-				if (key === "image" || key === "video") {
-					return {
-						type: key === "image" ? "photo" : key,
-						media: fileLink,
-					};
-				} else if (key == "invalidVideos" || key == "invalidImages") {
-					if (key == "invalidVideos") {
-						const convertedFilePath = await convertInvalidVideo(fileLink);
-						if (convertedFilePath) {
-							return {
-								type: "video",
-								media: { source: fs.createReadStream(convertedFilePath) },
-							};
-						}
-					} else {
-						const convertedFilePath = await convertInvalidImage(fileLink);
-						if (convertedFilePath) {
-							return {
-								type: "photo",
-								media: { source: fs.createReadStream(convertedFilePath) },
-							};
-						}
-					}
-				}
-			}),
-			// .filter(Boolean)
-		).then(async (array) => {
-			const filteredArray = array.filter(Boolean);
-			if (filteredArray.length !== 0) {
-				// divide array to blocks for sendMediaGroup directive (max 10 files & 50Mb for group)
-				let blockLength = 10;
-				if (key == "video" || key == "invalidVideos") {
-					blockLength = 1;
-				}
+		// Тяжёлые категории (скачивание + конвертация) обрабатываем последовательно,
+		// чтобы не держать несколько больших файлов в памяти и не запускать несколько
+		// процессов ffmpeg одновременно (иначе контейнер падает по OOM).
+		const isHeavy = key === "invalidVideos" || key === "invalidImages";
 
-				for (let i = 0; i < filteredArray.length; i += blockLength) {
-					const block = filteredArray.slice(i, i + blockLength);
-					tgObjectsArray.push(block);
-				}
+		let array;
+		if (isHeavy) {
+			array = [];
+			for (const element of data[key]) {
+				array.push(await buildTgElement(key, element));
 			}
-		});
+		} else {
+			// Лёгкие категории отправляются ссылкой без скачивания — можно параллельно
+			array = await Promise.all(data[key].map((element) => buildTgElement(key, element)));
+		}
+
+		const filteredArray = array.filter(Boolean);
+		if (filteredArray.length !== 0) {
+			// divide array to blocks for sendMediaGroup directive (max 10 files & 50Mb for group)
+			let blockLength = 10;
+			if (key == "video" || key == "invalidVideos") {
+				blockLength = 1;
+			}
+
+			for (let i = 0; i < filteredArray.length; i += blockLength) {
+				const block = filteredArray.slice(i, i + blockLength);
+				tgObjectsArray.push(block);
+			}
+		}
 	}
 	return tgObjectsArray;
+}
+
+/**
+ * Build single telegram media object for the given file
+ *
+ * @param {string} key - category name (image | video | invalidVideos | invalidImages)
+ * @param {Object} element - file descriptor from yaDisk response
+ * @returns {Promise<Object|undefined>}
+ */
+async function buildTgElement(key, element) {
+	// Get file downloading link
+	const fileLink = await getFile(encodeURIComponent(element.path.split(":")[1]));
+	if (key === "image" || key === "video") {
+		return {
+			type: key === "image" ? "photo" : key,
+			media: fileLink,
+		};
+	} else if (key == "invalidVideos") {
+		const fileName = element.path.split("/").pop();
+		console.log(getTimeStamp(), `▶️ Начало обработки видео: ${fileName}`);
+		const convertedFilePath = await convertInvalidVideo(fileLink);
+		console.log(getTimeStamp(), `✅ Обработка видео завершена: ${fileName}`);
+		if (convertedFilePath) {
+			return {
+				type: "video",
+				media: { source: fs.createReadStream(convertedFilePath) },
+			};
+		}
+	} else if (key == "invalidImages") {
+		const fileName = element.path.split("/").pop();
+		console.log(getTimeStamp(), `▶️ Начало обработки изображения: ${fileName}`);
+		const convertedFilePath = await convertInvalidImage(fileLink);
+		console.log(getTimeStamp(), `✅ Обработка изображения завершена: ${fileName}`);
+		if (convertedFilePath) {
+			return {
+				type: "photo",
+				media: { source: fs.createReadStream(convertedFilePath) },
+			};
+		}
+	}
+	return undefined;
 }
 
 /**
